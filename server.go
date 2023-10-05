@@ -135,7 +135,6 @@ func GetRate(ctx context.Context) (*Rate, error) {
 
 		var data Rate
 		err = json.Unmarshal(result, &data)
-		fmt.Println(data)
 		if err != nil {
 			log.Printf("Erro ao realizar parse da req %v", err)
 			return nil, err
