@@ -19,7 +19,7 @@ func main() {
 	rate, err := GetBid(ctxApi)
 	if err != nil {
 		log.Println("Erro ao realizar consulta %v", err)
-
+		panic(err)
 	}
 
 	f, err := os.Create("cotacao.txt")
