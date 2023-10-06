@@ -10,16 +10,16 @@ import (
 	"net/http"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {
-
-	db, err := sql.Open("mysql", "root:root@tcp(localhost:3306)/goexpert")
-
+	db, err := createDB()
 	if err != nil {
+		log.Printf("erro ao criar banco de dados %v", err)
 		panic(err)
 	}
+
 	defer db.Close()
 
 	mux := http.NewServeMux()
@@ -29,6 +29,8 @@ func main() {
 		defer cancel()
 		rate, err := GetRate(ctxApi)
 		if err != nil {
+			log.Printf("erro ao salvar dado no banco %v", err)
+
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Erro ao realizar consulta"))
 			return
@@ -38,6 +40,7 @@ func main() {
 		defer cancel2()
 		err = NewRepository(db).Create(ctxBD, rate)
 		if err != nil {
+			log.Printf("Erro ao salvar dado no banco %v", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("Erro ao realizar consulta"))
 			return
@@ -87,7 +90,7 @@ func (repository *Repository) Create(ctx context.Context, entity *Rate) error {
 	select {
 	case <-ctx.Done():
 		log.Println("Timeout na persistência no banco de dados")
-		return fmt.Errorf("Timeout ao salvar dados")
+		return fmt.Errorf("timeout ao salvar dados")
 	default:
 		query, err := repository.db.Prepare("INSERT INTO dollar_exchange_rate" +
 			"(code, codein, name, high, low, varBid, pctChange, bid, ask) " +
@@ -116,7 +119,7 @@ func GetRate(ctx context.Context) (*Rate, error) {
 	select {
 	case <-ctx.Done():
 		log.Println("Timeout ao consultar api")
-		return nil, fmt.Errorf("Timeout ao consultar api")
+		return nil, fmt.Errorf("timeout ao consultar api")
 	default:
 		res, err := http.Get("https://economia.awesomeapi.com.br/json/last/USD-BRL")
 
@@ -142,5 +145,34 @@ func GetRate(ctx context.Context) (*Rate, error) {
 		}
 		return &data, nil
 	}
+
+}
+
+func createDB() (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", "./data.db")
+
+	if err != nil {
+		return nil, err
+	}
+
+	createTableSQL := `
+		CREATE TABLE dollar_exchange_rate (
+			id SERIAL PRIMARY KEY,
+			code VARCHAR(10) NOT NULL,
+			codein VARCHAR(10) NOT NULL,
+			name VARCHAR(255) NOT NULL,
+			high FLOAT NOT NULL,
+			low FLOAT NOT NULL,
+			varBid FLOAT NOT NULL,
+			pctChange FLOAT NOT NULL,
+			bid FLOAT NOT NULL,
+			ask FLOAT NOT NULL
+		);`
+
+	_, err = db.Exec(createTableSQL)
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
 
 }

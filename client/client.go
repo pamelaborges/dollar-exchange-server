@@ -18,7 +18,7 @@ func main() {
 	defer cancel()
 	rate, err := GetBid(ctxApi)
 	if err != nil {
-		log.Println("Erro ao realizar consulta %v", err)
+		log.Printf("Erro ao realizar consulta %v", err)
 		panic(err)
 	}
 
@@ -48,7 +48,7 @@ func GetBid(ctx context.Context) (*Bid, error) {
 	select {
 	case <-ctx.Done():
 		log.Println("Timeout ao consultar api")
-		return nil, fmt.Errorf("Timeout ao consultar api")
+		return nil, fmt.Errorf("timeout ao consultar api")
 	default:
 		res, err := http.Get("http://localhost:8080/cotacao")
 
